@@ -1,0 +1,160 @@
+{{define "content"}}
+<div class="container">
+  <!-- 页面头部 -->
+  <div class="page-header">
+    <h1><i class="fas fa-users"></i> 用户管理</h1>
+    <div class="header-stats">
+      <div class="stat">
+        <span class="stat-value">{{len .Users}}</span>
+        <span class="stat-label">总用户</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="adminCount">0</span>
+        <span class="stat-label">管理员</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 工具栏 -->
+  <div class="toolbar">
+    <div class="search-box">
+      <i class="fas fa-search"></i>
+      <input type="text" id="searchInput" placeholder="搜索用户...">
+    </div>
+
+    <div class="toolbar-actions">
+      <select id="filterRole" class="filter-select">
+        <option value="all">全部角色</option>
+        <option value="admin">管理员</option>
+        <option value="user">普通用户</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 用户表格 -->
+  <div class="table-card">
+    <table class="users-table">
+      <thead>
+      <tr>
+        <th>ID</th>
+        <th>用户信息</th>
+        <th>邮箱</th>
+        <th>角色</th>
+        <th>注册时间</th>
+        {{if .CurrentUser.IsAdmin}}
+        <th>操作</th>
+        {{end}}
+      </tr>
+      </thead>
+      <tbody id="usersTableBody">
+      {{range .Users}}
+      <tr class="user-row" data-role="{{.Role}}">
+        <td>#{{.ID}}</td>
+        <td>
+          <div class="user-info">
+            <span class="user-avatar">{{.Username | printf "%.1s" | upper}}</span>
+            <span>{{.Username}}</span>
+          </div>
+        </td>
+        <td>{{.Email}}</td>
+        <td>
+          {{if eq .Role "admin"}}
+          <span class="badge badge-admin">
+                            <i class="fas fa-crown"></i> 管理员
+                        </span>
+          {{else}}
+          <span class="badge badge-user">
+                            <i class="fas fa-user"></i> 用户
+                        </span>
+          {{end}}
+        </td>
+        <td>{{.CreatedAt.Format "2006-01-02"}}</td>
+        {{if $.CurrentUser.IsAdmin}}
+        <td>
+          <div class="action-buttons">
+            <button class="btn-icon btn-edit" onclick="editUser({{.ID}}, '{{.Username}}', '{{.Email}}', '{{.Role}}')">
+              <i class="fas fa-edit"></i>
+            </button>
+            {{if ne .ID $.CurrentUser.ID}}
+            <form action="/users/delete" method="post" class="inline-form" onsubmit="return confirmDelete('{{.Username}}')">
+              <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+              <input type="hidden" name="user_id" value="{{.ID}}">
+              <button type="submit" class="btn-icon btn-delete">
+                <i class="fas fa-trash"></i>
+              </button>
+            </form>
+            {{end}}
+          </div>
+        </td>
+        {{end}}
+      </tr>
+      {{end}}
+      </tbody>
+    </table>
+
+    <div id="emptyState" class="empty-state" style="display: none;">
+      <i class="fas fa-inbox"></i>
+      <p>没有找到用户</p>
+    </div>
+  </div>
+</div>
+
+<!-- 编辑用户弹窗 -->
+<div id="editModal" class="modal">
+  <div class="modal-content">
+    <h3><i class="fas fa-user-edit"></i> 编辑用户</h3>
+    <form action="/users/update" method="post">
+      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+      <input type="hidden" id="edit-user-id" name="user_id">
+
+      <div class="form-group">
+        <label>用户名</label>
+        <input type="text" id="edit-username" disabled>
+      </div>
+
+      <div class="form-group">
+        <label>邮箱</label>
+        <input type="email" id="edit-email" name="email" required>
+      </div>
+
+      <div class="form-group">
+        <label>角色</label>
+        <select id="edit-role" name="role">
+          <option value="user">普通用户</option>
+          <option value="admin">管理员</option>
+        </select>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" onclick="closeModal()">取消</button>
+        <button type="submit" class="btn-primary">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // 统计管理员数量
+  document.getElementById('adminCount').textContent =
+          document.querySelectorAll('.user-row[data-role="admin"]').length;
+
+  // 编辑用户
+  function editUser(id, username, email, role) {
+    document.getElementById('edit-user-id').value = id;
+    document.getElementById('edit-username').value = username;
+    document.getElementById('edit-email').value = email;
+    document.getElementById('edit-role').value = role;
+    document.getElementById('editModal').style.display = 'flex';
+  }
+
+  // 关闭弹窗
+  function closeModal() {
+    document.getElementById('editModal').style.display = 'none';
+  }
+
+  // 确认删除
+  function confirmDelete(username) {
+    return confirm(`确定要删除用户 "${username}" 吗？`);
+  }
+</script>
+{{end}}

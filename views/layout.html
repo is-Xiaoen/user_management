@@ -1,0 +1,100 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UserHub - 用户管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<!-- 简洁导航栏 -->
+<nav class="navbar">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-cube"></i>
+            <span>UserHub</span>
+        </a>
+
+        <div class="nav-menu">
+            {{if .CurrentUser}}
+            <a href="/users" class="nav-link">
+                <i class="fas fa-users"></i>
+                <span>用户</span>
+            </a>
+            <div class="user-menu">
+                <button class="user-btn" id="userMenuBtn">
+                    <span class="user-avatar">{{.CurrentUser.Username | printf "%.1s" | upper}}</span>
+                    <span class="user-name">{{.CurrentUser.Username}}</span>
+                    {{if .CurrentUser.IsAdmin}}
+                    <i class="fas fa-crown admin-icon"></i>
+                    {{end}}
+                    <i class="fas fa-chevron-down" style="font-size: 0.75rem; margin-left: 0.5rem;"></i>
+                </button>
+                <div class="dropdown-menu" id="userDropdown">
+                    <div class="dropdown-header">
+                        <div class="user-info">
+                            <strong>{{.CurrentUser.Username}}</strong>
+                            <small>{{.CurrentUser.Email}}</small>
+                        </div>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <a href="#" class="dropdown-item">
+                        <i class="fas fa-user"></i> 个人资料
+                    </a>
+                    <a href="#" class="dropdown-item">
+                        <i class="fas fa-cog"></i> 设置
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <form action="/logout" method="post" style="margin: 0;">
+                        <button type="submit" class="dropdown-item logout-btn">
+                            <i class="fas fa-sign-out-alt"></i> 退出登录
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {{else}}
+            <a href="/login" class="nav-link">登录</a>
+            <a href="/register" class="btn-primary">注册</a>
+            {{end}}
+        </div>
+    </div>
+</nav>
+
+<!-- 主内容 -->
+<main class="main-content">
+    {{template "content" .}}
+</main>
+
+<!-- 简洁页脚 -->
+<footer class="footer">
+    <p>&copy; 2024 UserHub | Built with Go & Love</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/script.js"></script>
+<script>
+    // 改进的下拉菜单交互
+    document.addEventListener('DOMContentLoaded', function() {
+        const userMenuBtn = document.getElementById('userMenuBtn');
+        const userDropdown = document.getElementById('userDropdown');
+
+        if (userMenuBtn && userDropdown) {
+            userMenuBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                userDropdown.classList.toggle('show');
+            });
+
+            document.addEventListener('click', function(e) {
+                if (!userDropdown.contains(e.target) && !userMenuBtn.contains(e.target)) {
+                    userDropdown.classList.remove('show');
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>
+{{end}}

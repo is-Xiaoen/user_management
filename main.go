@@ -1,9 +1,16 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
+	"user-management-system/config"
+	"user-management-system/errors"
 
 	"user-management-system/controllers"
 	"user-management-system/database"
@@ -52,6 +59,49 @@ func main() {
 
 	//设置路由
 	setupRoutes()
+
+	// 获取配置
+	cfg := config.GetConfig()
+
+	// 创建服务器
+	server := &http.Server{
+		Addr:         "0.0.0.0:" + cfg.ServerPort,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+		Handler:      errors.RecoverMiddleware(http.DefaultServeMux), // 添加错误恢复中间件
+	}
+
+	// 创建通道监听终止信号
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	// 启动服务器
+	go func() {
+		logger.Info("服务器启动在 http://localhost:%s", cfg.ServerPort)
+		log.Printf("服务器启动在 http://localhost:%s\n", cfg.ServerPort)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("服务器启动失败: %v", err)
+			log.Fatalf("服务器启动失败: %v", err)
+		}
+	}()
+
+	// 等待终止信号
+	<-done
+	logger.Info("收到关闭信号，服务器正在关闭...")
+	log.Println("服务器正在关闭...")
+
+	// 优雅关闭（给予5秒时间完成正在处理的请求）
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		logger.Error("服务器关闭失败: %v", err)
+		log.Printf("服务器关闭失败: %v", err)
+	}
+
+	logger.Info("服务器已停止")
+	log.Println("服务器已停止")
 }
 
 // 设置路由
@@ -77,6 +127,7 @@ func setupRoutes() {
 	//登录路由
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
+			//fmt.Println("main中成功执行")
 			controllers.HandleLogin(w, r)
 		} else {
 			controllers.RenderLoginPage(w, r)
@@ -111,5 +162,4 @@ func setupRoutes() {
 	// API路由（用于返回JSON数据）
 	http.HandleFunc("/api/users", controllers.HandleAPIUsers)
 	http.HandleFunc("/api/users/stats", controllers.HandleAPIUserStats)
-
 }

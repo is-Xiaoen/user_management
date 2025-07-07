@@ -98,7 +98,7 @@ func NewConflictError(message string) *AppError {
 func NewInternalError(internal error) *AppError {
 	return &AppError{
 		Type:     InternalError,
-		Message:  "服务器内部错误，请稍后重试",
+		Message:  "服务器内部错误，请稍后重试"+internal.Error(),
 		Internal: internal,
 	}
 }

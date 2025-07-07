@@ -32,7 +32,7 @@ func RenderHomePage(w http.ResponseWriter, r *http.Request) {
 		CurrentUser: currentUser,
 	}
 
-	tmpl, err := template.New("layout.html").Funcs(funcMap).ParseFiles("views/layout", "views/index.html")
+	tmpl, err := template.New("layout.html").Funcs(funcMap).ParseFiles("views/layout.html", "views/index.html")
 
 	if err != nil {
 		log.Printf("模板解析错误: %v", err)

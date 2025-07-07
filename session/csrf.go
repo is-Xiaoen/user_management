@@ -9,7 +9,7 @@ import (
 
 const (
 	// CSRFTokenKey 是存储在会话(session)中的CSRF令牌的键名
-	CSRFTokenKey = " csrf_token"
+	CSRFTokenKey = "csrf_token"
 	// CSRFTokenLength 是CSRF令牌的字节长度
 	CSRFTokenLength = 32
 )
@@ -65,7 +65,7 @@ func ValidateCSRFToken(r *http.Request, session *Session) error {
 	}
 
 	//验证令牌是否匹配
-	if requestToken == " " || requestToken != sessionToken {
+	if requestToken == "" || requestToken != sessionToken {
 		return errors.New("CSRF令牌无效")
 	}
 

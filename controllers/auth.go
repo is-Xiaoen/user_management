@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -115,6 +116,9 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	user, err := userService.AuthenticateUser(username, password)
 	if err != nil {
 		// 记录登录失败    UserAction是记录用户操作日志
+		//fmt.Println("controllers\auth.go 的 119行")
+		//fmt.Println(err)
+		//fmt.Println(1111)
 		logger.UserAction(username, "登录", "IP: "+r.RemoteAddr, false)
 
 		//渲染登录页面并显示错误

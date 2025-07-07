@@ -17,11 +17,6 @@ type User struct {
 
 // CheckPassword
 func (u *User) CheckPassword(password string) bool {
-	// 明文比较
-	if u.Password == password {
-		return true
-	}
-
 	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
 	return err == nil
 }

@@ -97,6 +97,8 @@ func (s *userServiceImpl) RegisterUser(username, password, email string) error {
 
 // AuthenticateUser 用户认证
 func (s *userServiceImpl) AuthenticateUser(username, password string) (*models.User, error) {
+	//fmt.Println("进入到services__user_service.go 100")
+
 	// 验证输入
 	if username == "" || password == "" {
 		return nil, errors.NewValidationError("", "用户名和密码不能为空")

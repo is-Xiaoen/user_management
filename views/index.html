@@ -1,0 +1,75 @@
+{{define "content"}}
+<div class="hero">
+    <div class="container">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                <span class="gradient-text">管理用户</span>
+                <br>从未如此简单
+            </h1>
+            <p class="hero-desc">
+                现代化的用户管理平台，安全、高效、易用
+            </p>
+            <div class="hero-actions">
+                {{if .CurrentUser}}
+                <a href="/users" class="btn-primary btn-lg">
+                    <i class="fas fa-arrow-right"></i> 进入控制台
+                </a>
+                {{else}}
+                <a href="/register" class="btn-primary btn-lg">
+                    <i class="fas fa-rocket"></i> 免费开始
+                </a>
+                <a href="/login" class="btn-secondary btn-lg">
+                    <i class="fas fa-sign-in-alt"></i> 登录
+                </a>
+                {{end}}
+            </div>
+        </div>
+
+        <!-- 装饰元素 -->
+        <div class="hero-decoration">
+            <div class="floating-card card-1">
+                <i class="fas fa-shield-alt"></i>
+                <span>安全加密</span>
+            </div>
+            <div class="floating-card card-2">
+                <i class="fas fa-bolt"></i>
+                <span>极速响应</span>
+            </div>
+            <div class="floating-card card-3">
+                <i class="fas fa-chart-line"></i>
+                <span>数据分析</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 特性展示 -->
+<section class="features">
+    <div class="container">
+        <h2 class="section-title">核心功能</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <h3>权限管理</h3>
+                <p>灵活的角色权限系统，精准控制访问权限</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h3>安全防护</h3>
+                <p>bcrypt加密、CSRF保护，全方位保障数据安全</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-zap"></i>
+                </div>
+                <h3>高性能</h3>
+                <p>基于Go语言构建，毫秒级响应速度</p>
+            </div>
+        </div>
+    </div>
+</section>
+{{end}}
