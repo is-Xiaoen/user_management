@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
