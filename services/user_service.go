@@ -12,6 +12,10 @@ type UserService interface {
 	// 用户认证相关
 	RegisterUser(username, password, email string) error
 	AuthenticateUser(username, password string) (*models.User, error)
+
+	//用户管理相关
+	GetUserByID(id int) (*models.User, error)
+	GetUserByUsername(username string) (*models.User, error)
 }
 
 // userServiceImpl 是 UserService 接口的具体实现
@@ -99,6 +103,37 @@ func (s *userServiceImpl) AuthenticateUser(username, password string) (*models.U
 	}
 	if !user.CheckPassword(password) {
 		return nil, errors.NewUnauthorizedError("密码错误")
+	}
+	return user, nil
+}
+
+// GetUserByID 通过ID获取用户
+func (s *userServiceImpl) GetUserByID(id int) (*models.User, error) {
+	if id <= 0 {
+		return nil, errors.NewValidationError("id", "无效的用户ID")
+	}
+	user, err := s.userRepo.GetByID(id)
+	if err != nil {
+		return nil, errors.NewInternalError(fmt.Errorf("获取用户失败: %w", err))
+	}
+	if user == nil {
+		return nil, errors.NewNotFoundError("用户不存在")
+	}
+	return user, nil
+}
+
+// GetUserByUsername 通过用户名获取用户
+func (s *userServiceImpl) GetUserByUsername(username string) (*models.User, error) {
+	if username == "" {
+		return nil, errors.NewValidationError("username", "用户名不能为空")
+	}
+
+	user, err := s.userRepo.GetByUsername(username)
+	if err != nil {
+		return nil, errors.NewInternalError(fmt.Errorf("获取用户失败: %w", err))
+	}
+	if user == nil {
+		return nil, errors.NewNotFoundError("用户不存在")
 	}
 	return user, nil
 }

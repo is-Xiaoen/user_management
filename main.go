@@ -75,11 +75,26 @@ func setupRoutes() {
 	})
 
 	//登录路由
-	http.Handle("/login", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPoset {
+	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
 			controllers.HandleLogin(w, r)
 		} else {
-
+			controllers.RenderLoginPage(w, r)
 		}
 	})
+
+	//注册路由
+	http.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			controllers.HandleRegister(w, r)
+		} else {
+			controllers.RenderRegisterPage(w, r)
+		}
+	}
+
+	//登出路由
+	http.HandleFunc("/logout",controllers.HandleLogout)
+
+	
+
 }
