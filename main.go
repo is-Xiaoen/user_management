@@ -57,7 +57,7 @@ func main() {
 // 设置路由
 func setupRoutes() {
 	//创建一个带CSRF保护的处理器链
-	//cerfChain := session.CSRFMiddleware
+	cerfChain := session.CSRFMiddleware
 
 	//静态文件服务
 	//这段代码的作用是：让你的网站能够提供静态文件服务 意思是在浏览器
@@ -94,5 +94,22 @@ func setupRoutes() {
 
 	//登出路由
 	http.HandleFunc("/logout", controllers.HandleLogout)
+
+	//用户列表路由 (需要认证)
+	http.Handle("/users", middleware.AuthMiddleware(http.HandlerFunc(controllers.RenderUsersPage)))
+
+	//用户删除路由 (管理员权限 + CSRF保护)
+	http.Handle("/users/delete", middleware.AuthMiddleware(
+		cerfChain(
+			http.HandlerFunc(controllers.HandleDeleteUser))))
+
+	//用户更新路由 (管理员权限 + CSRF保护)
+	http.Handle("/users/update", middleware.AuthMiddleware(
+		cerfChain(
+			http.HandlerFunc(controllers.HandleUpdateUser))))
+
+	// API路由（用于返回JSON数据）
+	http.HandleFunc("/api/users", controllers.HandleAPIUsers)
+	http.HandleFunc("/api/users/stats", controllers.HandleAPIUserStats)
 
 }

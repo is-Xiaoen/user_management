@@ -199,6 +199,28 @@ func (r *userRepository) Update(user *models.User) error {
 
 }
 
+// UpdateEmailAndRole 更新用户邮箱和角色
+func (r *userRepository) UpdateEmailAndRole(id int, email, role string) error {
+	query := `
+		UPDATE users
+		SET email = ?, role = ?
+		WHERE id = ?
+	`
+	result, err := r.db.Exec(query, email, role, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 // Delete 删除用户
 func (r *userRepository) Delete(id int) error {
 	query := `DELETE FROM users WHERE id = ?`
@@ -252,6 +274,19 @@ func (r *userRepository) Count() (int64, error) {
 	query := `SELECT COUNT(*) FROM users`
 
 	err := r.db.QueryRow(query).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+// CountByRole 根据角色统计用户数
+func (r *userRepository) CountByRole(role string) (int64, error) {
+	var count int64
+	query := `SELECT COUNT(*) FROM users WHERE role = ?`
+
+	err := r.db.QueryRow(query, role).Scan(&count)
 	if err != nil {
 		return 0, err
 	}

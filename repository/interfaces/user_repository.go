@@ -22,6 +22,9 @@ type UserRepository interface {
 	// Update 更新用户信息
 	Update(user *models.User) error
 
+	// UpdateEmailAndRole 更新用户邮箱和角色
+	UpdateEmailAndRole(id int, email, role string) error
+
 	// Delete 删除用户
 	Delete(id int) error
 
@@ -33,4 +36,7 @@ type UserRepository interface {
 
 	// Count 获取用户总数
 	Count() (int64, error)
+
+	// CountByRole 根据角色统计用户数
+	CountByRole(role string) (int64, error)
 }
