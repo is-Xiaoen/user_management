@@ -57,7 +57,7 @@ func main() {
 // 设置路由
 func setupRoutes() {
 	//创建一个带CSRF保护的处理器链
-	cerfChain := session.CSRFMiddleware
+	//cerfChain := session.CSRFMiddleware
 
 	//静态文件服务
 	//这段代码的作用是：让你的网站能够提供静态文件服务 意思是在浏览器
@@ -90,11 +90,9 @@ func setupRoutes() {
 		} else {
 			controllers.RenderRegisterPage(w, r)
 		}
-	}
+	})
 
 	//登出路由
-	http.HandleFunc("/logout",controllers.HandleLogout)
-
-	
+	http.HandleFunc("/logout", controllers.HandleLogout)
 
 }
