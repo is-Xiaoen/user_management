@@ -1,9 +1,9 @@
 package session
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"math/rand"
 	"net/http"
 	"sync"
 	"time"
@@ -98,21 +98,19 @@ func (manager *Manager) CreateSession(w http.ResponseWriter, userID int, remembe
 	manager.lock.Lock()
 	defer manager.lock.Unlock()
 
-	//生成会话ID
+	// 生成会话ID
 	sid, err := manager.generateSessionID()
 	if err != nil {
 		return nil, err
 	}
 
-	//计算过期时间
+	// 计算过期时间
 	var expiresAt time.Time
 	var maxAge int
 	if remember {
-		// 如果选择记住我, 会话有效期为30天
 		expiresAt = time.Now().Add(30 * 24 * time.Hour)
-		maxAge = 30 * 24 * 60 * 60 // 30天（秒）
+		maxAge = 30 * 24 * 60 * 60
 	} else {
-		// 否则使用默认的最大生存时间
 		expiresAt = time.Now().Add(manager.maxLifetime)
 		maxAge = int(manager.maxLifetime.Seconds())
 	}
@@ -126,17 +124,22 @@ func (manager *Manager) CreateSession(w http.ResponseWriter, userID int, remembe
 		ExpiresAt: expiresAt,
 	}
 
-	//存储会话
+	// 立即生成 CSRF token
+	token := generateCSRFTokenDirect()
+	session.Data[CSRFTokenKey] = token
+
+	// 存储会话
 	manager.sessions[sid] = session
 
-	//设置Cookie
+	// 设置Cookie
 	cookie := http.Cookie{
 		Name:     manager.cookieName,
 		Value:    sid,
 		Path:     "/",
 		HttpOnly: true,
 		MaxAge:   maxAge,
-		Secure:   false,
+		Secure:   false,                // 生产环境应该设为 true
+		SameSite: http.SameSiteLaxMode, // 新增：防止 CSRF
 	}
 	http.SetCookie(w, &cookie)
 
@@ -145,7 +148,7 @@ func (manager *Manager) CreateSession(w http.ResponseWriter, userID int, remembe
 
 // GetSession 从请求中获取会话
 func (manager *Manager) GetSession(r *http.Request) (*Session, error) {
-	// 从Cookie 中获取会话ID
+	// 从Cookie中获取会话ID
 	cookie, err := r.Cookie(manager.cookieName)
 	if err != nil {
 		return nil, err
@@ -153,23 +156,22 @@ func (manager *Manager) GetSession(r *http.Request) (*Session, error) {
 
 	sid := cookie.Value
 
-	//使用读锁获取会话
-	manager.lock.RLock()
-	session, exists := manager.sessions[sid]
-	manager.lock.RUnlock()
+	// 使用写锁，避免并发问题
+	manager.lock.Lock()
+	defer manager.lock.Unlock()
 
+	session, exists := manager.sessions[sid]
 	if !exists {
 		return nil, errors.New("会话不存在或已过期")
 	}
 
-	//检查会话是否过期
+	// 检查会话是否过期
 	if session.ExpiresAt.Before(time.Now()) {
-		// 如果过期,删除会话
-		manager.lock.Lock()
+		// 直接删除过期会话，因为我们已经持有写锁
 		delete(manager.sessions, sid)
-		manager.lock.Unlock()
 		return nil, errors.New("会话已过期")
 	}
+
 	return session, nil
 }
 
@@ -211,4 +213,10 @@ func (manager *Manager) GC() {
 		}
 		manager.lock.Unlock()
 	}
+}
+
+func generateCSRFTokenDirect() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return base64.StdEncoding.EncodeToString(b)
 }

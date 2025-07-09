@@ -141,7 +141,8 @@ func HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	//删除用户
 	if err := userService.DeleteUser(userID); err != nil {
 		// 记录删除失败
-		logger.UserAction(currentUser.Username, "删除用户", fmt.Sprintf("目标用户: %s (ID: %d), 失败原因: %v", targetUsername, userID, err), false)
+		logger.UserActionWithError(currentUser.Username, "删除用户", 
+    fmt.Sprintf("目标用户: %s (ID: %d)", targetUsername, userID), err)
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -193,9 +194,8 @@ func HandleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	//更新用户
 	if err := userService.UpdateUser(userID, email, role); err != nil {
 		// 记录更新失败
-		logger.UserAction(currentUser.Username, "更新用户",
-			fmt.Sprintf("目标用户: %s (ID: %d), 邮箱: %s, 角色: %s, 失败原因: %v",
-				targetUsername, userID, email, role, err), false)
+		logger.UserActionWithError(currentUser.Username, "更新用户", 
+    fmt.Sprintf("目标用户: %s (ID: %d)", targetUsername, userID), err)
 		errors.HandleError(w, r, err)
 		return
 	}

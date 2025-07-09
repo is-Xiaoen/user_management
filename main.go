@@ -65,10 +65,10 @@ func main() {
 	// 创建服务器
 	server := &http.Server{
 		Addr:         "0.0.0.0:" + cfg.ServerPort,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
-		Handler:      errors.RecoverMiddleware(http.DefaultServeMux), // 添加错误恢复中间件
+		ReadTimeout:  15 * time.Second,                               //读取超时, 防止慢连接攻击
+		WriteTimeout: 15 * time.Second,                               //写入超时  防止连接断开后服务器还一直发送数据
+		IdleTimeout:  60 * time.Second,                               //空闲超时
+		Handler:      errors.RecoverMiddleware(http.DefaultServeMux), //  添加错误恢复中间件
 	}
 
 	// 创建通道监听终止信号
@@ -94,7 +94,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
+	if err := server.Shutdown(ctx); err != nil { //server.Shutdown(ctx) 先关闭监听端口  然后再看ctx中到期时间,到期后关闭服务器
 		logger.Error("服务器关闭失败: %v", err)
 		log.Printf("服务器关闭失败: %v", err)
 	}

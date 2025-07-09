@@ -118,7 +118,8 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		//fmt.Println("controllers\auth.go 的 119行")
 		//fmt.Println(err)
 		//fmt.Println(1111)
-		logger.UserAction(username, "登录", "IP: "+r.RemoteAddr, false)
+		// 记录登录失败，包含错误详情
+		logger.UserActionWithError(username, "登录", "IP: "+r.RemoteAddr, err)
 
 		//渲染登录页面并显示错误
 		appErr, _ := errors.IsAppError(err)
@@ -144,7 +145,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 使用会话管理创建会话
-	if err := session.Login(w, user.ID, remember); err != nil {
+	if err := session.Login(w, r, user.ID, remember); err != nil {
 		errors.HandleError(w, r, errors.NewInternalError(err))
 		return
 	}
@@ -183,8 +184,8 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 	//使用服务层注册用户
 	err = userService.RegisterUser(username, password, email)
 	if err != nil {
-		//记录注册失败
-		logger.UserAction(username, "注册", "邮箱: "+email+", IP: "+r.RemoteAddr, false)
+		// 记录注册失败，包含错误详情
+		logger.UserActionWithError(username, "注册", "邮箱: "+email+", IP: "+r.RemoteAddr, err)
 
 		//渲染注册页面并希纳是错误信息
 		appErr, _ := errors.IsAppError(err)

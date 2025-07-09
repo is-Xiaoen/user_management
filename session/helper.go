@@ -41,12 +41,17 @@ func GetCurrentUser(r *http.Request) (*models.User, error) {
 }
 
 // Login 处理用户登录, 创建会话
-func Login(w http.ResponseWriter, userID int, remember bool) error {
-	//创建会话
+func Login(w http.ResponseWriter, r *http.Request, userID int, remember bool) error {
+	// 先尝试销毁旧会话（如果存在）
+	// 注意：这里需要传入 r 参数，所以要修改函数签名
+	GlobalManager.DestroySession(w, r)
+
+	// 创建全新的会话
 	_, err := GlobalManager.CreateSession(w, userID, remember)
 	if err != nil {
 		return errors.NewInternalError(fmt.Errorf("创建会话失败: %w", err))
 	}
+
 	return nil
 }
 

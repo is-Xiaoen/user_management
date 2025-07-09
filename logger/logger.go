@@ -146,6 +146,19 @@ func UserAction(username, action, details string, success bool) {
 	Info("用户操作 - 用户: %s, 操作: %s, 详情: %s, 结果: %s", username, action, details, status)
 }
 
+// UserActionWithError 记录用户操作日志（包含错误详情）
+func UserActionWithError(username, action, details string, err error) {
+    if err != nil {
+        // 如果有错误，记录详细错误信息
+        Error("用户操作失败 - 用户: %s, 操作: %s, 详情: %s, 错误: %v", 
+            username, action, details, err)
+    } else {
+        // 成功的情况
+        Info("用户操作成功 - 用户: %s, 操作: %s, 详情: %s", 
+            username, action, details)
+    }
+}
+
 // Close 关闭日志文件
 func Close() {
 	// 在程序退出时调用，确保关闭打开的日志文件
