@@ -158,7 +158,4 @@ func setupRoutes() {
 		cerfChain(
 			http.HandlerFunc(controllers.HandleUpdateUser))))
 
-	// API路由（用于返回JSON数据）
-	http.HandleFunc("/api/users", controllers.HandleAPIUsers)
-	http.HandleFunc("/api/users/stats", controllers.HandleAPIUserStats)
 }

@@ -1,14 +1,12 @@
 package controllers
 
 import (
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 	"user-management-system/logger"
 
 	"user-management-system/errors"
@@ -141,8 +139,8 @@ func HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	//删除用户
 	if err := userService.DeleteUser(userID); err != nil {
 		// 记录删除失败
-		logger.UserActionWithError(currentUser.Username, "删除用户", 
-    fmt.Sprintf("目标用户: %s (ID: %d)", targetUsername, userID), err)
+		logger.UserActionWithError(currentUser.Username, "删除用户",
+			fmt.Sprintf("目标用户: %s (ID: %d)", targetUsername, userID), err)
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -194,8 +192,8 @@ func HandleUpdateUser(w http.ResponseWriter, r *http.Request) {
 	//更新用户
 	if err := userService.UpdateUser(userID, email, role); err != nil {
 		// 记录更新失败
-		logger.UserActionWithError(currentUser.Username, "更新用户", 
-    fmt.Sprintf("目标用户: %s (ID: %d)", targetUsername, userID), err)
+		logger.UserActionWithError(currentUser.Username, "更新用户",
+			fmt.Sprintf("目标用户: %s (ID: %d)", targetUsername, userID), err)
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -207,62 +205,4 @@ func HandleUpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	// 重定向到用户列表
 	http.Redirect(w, r, "/users", http.StatusSeeOther)
-}
-
-// HandleAPIUsers 处理API用户列表请求
-func HandleAPIUsers(w http.ResponseWriter, r *http.Request) {
-	// 获取所有用户
-	users, err := userService.GetAllUsers()
-	if err != nil {
-		errors.HandleError(w, r, err)
-		return
-	}
-
-	// 转换为安全的API响应格式
-	type APIUser struct {
-		ID        int       `json:"id"`
-		Username  string    `json:"username"`
-		Email     string    `json:"email"`
-		Role      string    `json:"role"`
-		CreatedAt time.Time `json:"created_at"`
-	}
-
-	apiUsers := make([]APIUser, len(users))
-	for i, user := range users {
-		apiUsers[i] = APIUser{
-			ID:        user.ID,
-			Username:  user.Username,
-			Email:     user.Email,
-			Role:      user.Role,
-			CreatedAt: user.CreatedAt,
-		}
-	}
-
-	// 设置响应头
-	w.Header().Set("Content-Type", "application/json")
-
-	// 编码并发送响应
-	if err := json.NewEncoder(w).Encode(apiUsers); err != nil {
-		log.Printf("JSON编码错误: %v", err)
-		errors.HandleError(w, r, errors.NewInternalError(err))
-	}
-}
-
-// HandleAPIUserStats 处理API用户统计请求
-func HandleAPIUserStats(w http.ResponseWriter, r *http.Request) {
-	// 获取用户统计信息
-	stats, err := userService.GetUserStats()
-	if err != nil {
-		errors.HandleError(w, r, err)
-		return
-	}
-
-	// 设置响应头
-	w.Header().Set("Content-Type", "application/json")
-
-	// 编码并发送响应
-	if err := json.NewEncoder(w).Encode(stats); err != nil {
-		log.Printf("JSON编码错误: %v", err)
-		errors.HandleError(w, r, errors.NewInternalError(err))
-	}
 }
