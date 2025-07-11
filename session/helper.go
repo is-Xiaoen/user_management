@@ -3,32 +3,39 @@ package session
 import (
 	"fmt"
 	"net/http"
+
 	"user-management-system/errors"
 	"user-management-system/models"
 	"user-management-system/repository/interfaces"
 )
 
-// 全局仓储实例
-var userRepository interfaces.UserRepository
+// Helper 会话辅助器，封装常用操作
+type Helper struct {
+	manager        *Manager
+	userRepository interfaces.UserRepository
+}
 
-// InitSession 初始化会话模块
-func InitSession(userRepo interfaces.UserRepository) {
-	userRepository = userRepo
+// NewHelper 创建会话辅助器
+func NewHelper(manager *Manager, userRepo interfaces.UserRepository) *Helper {
+	return &Helper{
+		manager:        manager,
+		userRepository: userRepo,
+	}
 }
 
 // GetCurrentUser 从请求中获取当前登录用户
-func GetCurrentUser(r *http.Request) (*models.User, error) {
-	//获取会话
-	session, err := GlobalManager.GetSession(r)
+func (h *Helper) GetCurrentUser(r *http.Request) (*models.User, error) {
+	// 获取会话
+	session, err := h.manager.GetSession(r)
 	if err != nil {
-		return nil, errors.NewInternalError(fmt.Errorf("获取用户信息失败: %w", err))
+		return nil, errors.NewUnauthorizedError("会话无效或已过期")
 	}
 
-	//从会话中获取用户ID
+	// 从会话中获取用户ID
 	userID := session.UserID
 
-	//根据用户ID获取用户信息
-	user, err := userRepository.GetByID(userID)
+	// 根据用户ID获取用户信息
+	user, err := h.userRepository.GetByID(userID)
 	if err != nil {
 		return nil, errors.NewInternalError(fmt.Errorf("获取用户信息失败: %w", err))
 	}
@@ -40,64 +47,35 @@ func GetCurrentUser(r *http.Request) (*models.User, error) {
 	return user, nil
 }
 
-// Login 处理用户登录, 创建会话
-func Login(w http.ResponseWriter, r *http.Request, userID int, remember bool) error {
-	// 先尝试销毁旧会话（如果存在）
-	// 注意：这里需要传入 r 参数，所以要修改函数签名
-	GlobalManager.DestroySession(w, r)
-
-	// 创建全新的会话
-	_, err := GlobalManager.CreateSession(w, userID, remember)
+// Login 处理用户登录，创建会话
+func (h *Helper) Login(w http.ResponseWriter, r *http.Request, userID int, remember bool) error {
+	// 重要：先销毁旧会话，防止会话固定攻击
+	h.manager.DestroySession(w, r)
+	// 创建新会话
+	_, err := h.manager.CreateSession(w, userID, remember)
 	if err != nil {
 		return errors.NewInternalError(fmt.Errorf("创建会话失败: %w", err))
 	}
-
 	return nil
 }
 
 // Logout 处理用户登出，销毁会话
-func Logout(w http.ResponseWriter, r *http.Request) {
-	GlobalManager.DestroySession(w, r)
+func (h *Helper) Logout(w http.ResponseWriter, r *http.Request) {
+	h.manager.DestroySession(w, r)
 }
 
-// SetSessionData 在会话中存储数据
-func SetSessionData(r *http.Request, key string, value interface{}) error {
-	session, err := GlobalManager.GetSession(r)
+// RequireLogin 检查用户是否已登录
+func (h *Helper) RequireLogin(r *http.Request) (*Session, error) {
+	session, err := h.manager.GetSession(r)
 	if err != nil {
-		return errors.NewUnauthorizedError("会话无效")
-	}
-
-	session.Data[key] = value
-	return nil
-}
-
-// GetSessionData 从会话中获取数据
-func GetSessionData(r *http.Request, key string) (interface{}, error) {
-	session, err := GlobalManager.GetSession(r)
-	if err != nil {
-		return nil, errors.NewUnauthorizedError("会话无效")
-	}
-
-	value, ok := session.Data[key]
-	if !ok {
-		return nil, nil
-	}
-
-	return value, nil
-}
-
-// RequireLogin 检查用户是否登录
-func RequireLogin(r *http.Request) (*Session, error) {
-	session, err := GlobalManager.GetSession(r)
-	if err != nil {
-		return nil, errors.NewUnauthorizedError("未登录")
+		return nil, errors.NewUnauthorizedError("请先登录")
 	}
 	return session, nil
 }
 
 // GetCSRFTokenForTemplate 为模板获取CSRF令牌
-func GetCSRFTokenForTemplate(r *http.Request) (string, error) {
-	session, err := GlobalManager.GetSession(r)
+func (h *Helper) GetCSRFTokenForTemplate(r *http.Request) (string, error) {
+	session, err := h.manager.GetSession(r)
 	if err != nil {
 		return "", errors.NewUnauthorizedError("会话无效")
 	}

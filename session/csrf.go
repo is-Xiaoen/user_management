@@ -72,27 +72,30 @@ func ValidateCSRFToken(r *http.Request, session *Session) error {
 	return nil
 }
 
-// CSRFMiddleware 是一个中间件 , 用于验证CSRF令牌
-func CSRFMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// 只处理POST、PUT、DELETE和PATCH请求
-		if r.Method == http.MethodPost || r.Method == http.MethodPut ||
-			r.Method == http.MethodDelete || r.Method == http.MethodPatch {
+// NewCSRFMiddleware CSRFMiddleware 创建CSRF中间件的函数
+func NewCSRFMiddleware(manager *Manager) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// 只处理POST、PUT、DELETE和PATCH请求
+			if r.Method == http.MethodPost || r.Method == http.MethodPut ||
+				r.Method == http.MethodDelete || r.Method == http.MethodPatch {
 
-			//获取会话
-			session, err := GlobalManager.GetSession(r)
-			if err != nil {
-				http.Error(w, "未授权: 无效的会话", http.StatusUnauthorized)
-				return
+				// 获取会话
+				session, err := manager.GetSession(r)
+				if err != nil {
+					http.Error(w, "未授权：无效的会话", http.StatusUnauthorized)
+					return
+				}
+
+				// 验证CSRF令牌
+				if err := ValidateCSRFToken(r, session); err != nil {
+					http.Error(w, "未授权："+err.Error(), http.StatusUnauthorized)
+					return
+				}
 			}
 
-			//验证CSRF 令牌
-			if err := ValidateCSRFToken(r, session); err != nil {
-				http.Error(w, "未授权："+err.Error(), http.StatusUnauthorized)
-				return
-			}
-		}
-		//继续处理请求
-		next.ServeHTTP(w, r)
-	})
+			// 继续处理请求
+			next.ServeHTTP(w, r)
+		})
+	}
 }

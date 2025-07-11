@@ -60,8 +60,7 @@ type Manager struct {
 	maxLifetime time.Duration       // 默认session会话最大生存时间,如果没设置就使用这个 2h
 }
 
-// 全局会话管理器实例
-var GlobalManager *Manager
+// 移除这行：var GlobalManager *Manager
 
 // NewManager 创建一个新的会话管理器
 func NewManager(cookieName string, maxLifetime time.Duration) *Manager {
@@ -70,17 +69,6 @@ func NewManager(cookieName string, maxLifetime time.Duration) *Manager {
 		sessions:    make(map[string]*Session),
 		maxLifetime: maxLifetime,
 	}
-}
-
-// Init 初始化全局会话管理器
-func Init(cookieName string, maxLifetime time.Duration) {
-	GlobalManager = NewManager(cookieName, maxLifetime)
-	// 启动定期清理过期会话的goroutine
-	// 延迟启动GC，避免影响启动速度
-	go func() {
-		time.Sleep(10 * time.Second) // 延迟10秒后启动GC
-		GlobalManager.GC()
-	}()
 }
 
 // generateSessionID 生成一个唯一的会话ID
