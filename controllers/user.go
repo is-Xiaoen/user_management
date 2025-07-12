@@ -6,11 +6,14 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 
 	"user-management-system/app"
 	"user-management-system/errors"
 	"user-management-system/logger"
 	"user-management-system/models"
+	"user-management-system/repository/mysql"
+	"user-management-system/services"
 	"user-management-system/session"
 )
 
@@ -18,20 +21,54 @@ import (
 type UserController struct {
 	app           *app.App
 	sessionHelper *session.Helper
+	userService   services.UserService
+	once          sync.Once    // 确保服务只初始化一次
+	mu            sync.RWMutex // 保护并发访问
 }
 
 // NewUserController 创建用户控制器
-func NewUserController(application *app.App, sessionHelper *session.Helper) *UserController {
+func NewUserController(application *app.App) *UserController {
 	return &UserController{
-		app:           application,
-		sessionHelper: sessionHelper,
+		app: application,
+		// 注意：这里不再立即初始化服务
 	}
+}
+
+// getUserService 延迟初始化用户服务
+func (c *UserController) getUserService() services.UserService {
+	c.once.Do(func() {
+		// 创建用户仓库
+		userRepo := mysql.NewUserRepository(c.app.GetDB())
+
+		// 创建用户服务
+		c.userService = services.NewUserService(userRepo)
+
+		// 创建会话助手
+		c.sessionHelper = session.NewHelper(c.app.GetSessionManager(), userRepo)
+
+		logger.Info("UserController: 用户服务已初始化")
+	})
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.userService
+}
+
+// getSessionHelper 获取会话助手
+func (c *UserController) getSessionHelper() *session.Helper {
+	// 确保服务已初始化
+	c.getUserService()
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.sessionHelper
 }
 
 // RenderHomePage 渲染首页
 func (c *UserController) RenderHomePage(w http.ResponseWriter, r *http.Request) {
-	// 获取当前用户（可选）
-	currentUser, _ := c.sessionHelper.GetCurrentUser(r)
+	// 获取当前用户
+	sessionHelper := c.getSessionHelper()
+	currentUser, _ := sessionHelper.GetCurrentUser(r)
 
 	data := struct {
 		CurrentUser *models.User
@@ -54,8 +91,10 @@ func (c *UserController) RenderHomePage(w http.ResponseWriter, r *http.Request) 
 
 // RenderUsersPage 渲染用户列表页面
 func (c *UserController) RenderUsersPage(w http.ResponseWriter, r *http.Request) {
+	sessionHelper := c.getSessionHelper()
+
 	// 获取当前用户
-	currentUser, err := c.sessionHelper.GetCurrentUser(r)
+	currentUser, err := sessionHelper.GetCurrentUser(r)
 	if err != nil {
 		errors.HandleError(w, r, errors.NewUnauthorizedError(""))
 		return
@@ -65,14 +104,15 @@ func (c *UserController) RenderUsersPage(w http.ResponseWriter, r *http.Request)
 	logger.UserAction(currentUser.Username, "查看用户列表", "", true)
 
 	// 获取所有用户
-	users, err := c.app.UserService.GetAllUsers()
+	userService := c.getUserService()
+	users, err := userService.GetAllUsers()
 	if err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
 
 	// 获取CSRF令牌
-	csrfToken, err := c.sessionHelper.GetCSRFTokenForTemplate(r)
+	csrfToken, err := sessionHelper.GetCSRFTokenForTemplate(r)
 	if err != nil {
 		log.Printf("获取CSRF令牌失败: %v", err)
 		csrfToken = "" // 继续处理，但不使用CSRF保护
@@ -101,7 +141,7 @@ func (c *UserController) RenderUsersPage(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-// HandleDeleteUser  处理删除用户请求
+// HandleDeleteUser 处理删除用户请求
 func (c *UserController) HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		errors.HandleError(w, r, errors.NewAppError(
@@ -127,8 +167,8 @@ func (c *UserController) HandleDeleteUser(w http.ResponseWriter, r *http.Request
 	}
 
 	//获取当前用户
-	currentUser, err := c.sessionHelper.GetCurrentUser(r)
-	//currentUser, err := session.GetCurrentUser(r)
+	sessionHelper := c.getSessionHelper()
+	currentUser, err := sessionHelper.GetCurrentUser(r)
 	if err != nil {
 		errors.HandleError(w, r, errors.NewUnauthorizedError(""))
 		return
@@ -141,11 +181,15 @@ func (c *UserController) HandleDeleteUser(w http.ResponseWriter, r *http.Request
 	}
 
 	// 获取要删除的用户信息（用于日志记录）
-	targetUser, _ := c.app.UserService.GetUserByID(userID)
-	targetUsername := targetUser.Username
+	userService := c.getUserService()
+	targetUser, _ := userService.GetUserByID(userID)
+	targetUsername := ""
+	if targetUser != nil {
+		targetUsername = targetUser.Username
+	}
 
 	//删除用户
-	if err := c.app.UserService.DeleteUser(userID); err != nil {
+	if err := userService.DeleteUser(userID); err != nil {
 		// 记录删除失败
 		logger.UserActionWithError(currentUser.Username, "删除用户",
 			fmt.Sprintf("目标用户: %s (ID: %d)", targetUsername, userID), err)
@@ -176,6 +220,7 @@ func (c *UserController) HandleUpdateUser(w http.ResponseWriter, r *http.Request
 		errors.HandleError(w, r, errors.NewValidationError("", "无法解析表单"))
 		return
 	}
+
 	//获取表单数据
 	userIDStr := r.FormValue("user_id")
 	userID, err := strconv.Atoi(userIDStr)
@@ -187,18 +232,23 @@ func (c *UserController) HandleUpdateUser(w http.ResponseWriter, r *http.Request
 	role := r.FormValue("role")
 
 	//获取当前用户
-	currentUser, err := c.sessionHelper.GetCurrentUser(r)
+	sessionHelper := c.getSessionHelper()
+	currentUser, err := sessionHelper.GetCurrentUser(r)
 	if err != nil {
 		errors.HandleError(w, r, errors.NewUnauthorizedError(""))
 		return
 	}
 
 	//获取更新的用户信息 (记录日志)
-	targetUser, _ := c.app.UserService.GetUserByID(userID)
-	targetUsername := targetUser.Username
+	userService := c.getUserService()
+	targetUser, _ := userService.GetUserByID(userID)
+	targetUsername := ""
+	if targetUser != nil {
+		targetUsername = targetUser.Username
+	}
 
 	//更新用户
-	if err := c.app.UserService.UpdateUser(userID, email, role); err != nil {
+	if err := userService.UpdateUser(userID, email, role); err != nil {
 		// 记录更新失败
 		logger.UserActionWithError(currentUser.Username, "更新用户",
 			fmt.Sprintf("目标用户: %s (ID: %d)", targetUsername, userID), err)

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"user-management-system/app"
-	"user-management-system/session"
 )
 
 // Controllers 控制器集合
@@ -15,12 +14,11 @@ type Controllers struct {
 }
 
 // NewControllers 创建控制器集合
+// 注意：不再在这里初始化服务，而是让每个控制器自己管理
 func NewControllers(application *app.App) *Controllers {
-	sessionHelper := session.NewHelper(application.SessionManager, application.UserRepository)
-
 	return &Controllers{
-		Auth: NewAuthController(application, sessionHelper),
-		User: NewUserController(application, sessionHelper),
+		Auth: NewAuthController(application),
+		User: NewUserController(application),
 	}
 }
 
